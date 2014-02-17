@@ -184,5 +184,15 @@ describe("OptionsParser", function(){
         (function() { parser.parse({'somearg': { required: true }}, argv) }).should.throw();
     });
 
+    it("should not throw when passed an error handler", function(){
+        var argv = [];
+        (function() { parser.parse({'somearg': { required: true }}, argv, function(){}) }).should.not.throw();
+
+    });
+
+    it("should not throw when passed an error handler as second argument", function(){
+        (function() { parser.parse({'somearg': { required: true }}, function(e){}) }).should.not.throw();
+
+    });
 });
 

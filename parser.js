@@ -26,16 +26,35 @@ OptionsParser.prototype.isalnum = function(str, i)
 };
 
 /**
+ * Default error handler. Throws exception.
+ * @param {Object} err
+ */
+OptionsParser.prototype.defaultErrorHandler = function(err)
+{
+    if(err.required)
+        throw new Error(util.format(this.err_required, err.required));
+    if(err.argument)
+        throw new Error(util.format(this.err_argument, err.argument));
+    if(err.missing)
+        throw new Error(util.format(this.err_missing, err.missing.join(', ')));
+    if(err.unknown)
+        throw new Error(util.format(this.err_unknown, err.unknown));
+};
+
+/**
  * Parses command-line arguments
  * @param {object} opts
  * @param {?Array} argv argument array (default: process.argv(2..))
+ * @param {?Function} error callback handler for missing options etc (default: throw exception)
  * @returns {{opt: {}, args: Array}}
  */
-OptionsParser.prototype.parse = function(opts, argv)
+OptionsParser.prototype.parse = function(opts, argv, error)
 {
-
     opts = opts || {};
-    argv = argv || process.argv.slice(2);
+    // error can be passed as second argument if argv is left out
+    error = (argv instanceof Function) ? /** @type {Function} */ (argv) : (error || this.defaultErrorHandler.bind(this));
+    argv = Array.isArray(argv) ? argv :  process.argv.slice(2);
+
     var result = {};
 
     var args = [];
@@ -81,21 +100,19 @@ OptionsParser.prototype.parse = function(opts, argv)
         // short param
         if(arg.length == 2 && arg[0] == '-' && this.isalnum(arg, 1))
         {
-            if(expectsArg) (function(arg) { throw new Error(util.format(this.err_required, arg)); })(last);
-            if(!lookupArg(arg[1]))
-                throw new Error(util.format(this.err_unknown, arg));
-
+            if(expectsArg) error({required: last});
+            if(!lookupArg(arg[1])) error({unknown: arg});
             if(!expectsArg) setResult(last, true);
         }
 
         // long param
         else if(arg.length > 2 && arg[0] == '-' && arg[1] == '-' && this.isalnum(arg, 2))
         {
-            if(expectsArg) throw new Error(util.format(this.err_required, last));
+            if(expectsArg) error({required: last});
             var parts = arg.substr(2).split('=');
             arg = parts.shift();
             if(!lookupArg(arg))
-                throw new Error(util.format(this.err_unknown, "--" + arg));
+                error({unknown: '--' + arg});
 
             if(expectsArg) {
                 // is parameter of type --param=value ?
@@ -114,7 +131,7 @@ OptionsParser.prototype.parse = function(opts, argv)
                         setResult(arg, true);
                     else
                         // is parameter of type --param=value but shouldn't?
-                        throw new Error(util.format(this.err_argument, arg));
+                        error({argument: arg});
                 }
                 else
                     setResult(arg, true);
@@ -136,7 +153,7 @@ OptionsParser.prototype.parse = function(opts, argv)
 
     if(expectsArg)
     {
-        throw new Error(util.format(this.err_required, last));
+        error({required: last});
     }
 
     var requiredParams = [];
@@ -151,7 +168,7 @@ OptionsParser.prototype.parse = function(opts, argv)
 
     if(requiredParams.length > 0)
     {
-        throw new Error(util.format(this.err_missing, requiredParams.join(', ')));
+        error({missing: requiredParams});
     }
 
     return {
