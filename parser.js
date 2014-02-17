@@ -21,24 +21,21 @@ OptionsParser.prototype.err_missing = "Options %s are required";
 OptionsParser.prototype.isalnum = function(str, i)
 {
     var code = str.charCodeAt(i);
+    //        "0" <= code <= "9"           "A" <= code <= "Z"         "a" <= code <= "z"
     return ((code > 47 && code < 58) || (code > 64 && code < 91) || code > 96 && code < 123);
 };
-
-
-OptionsParser.prototype.getArgv = function()
-{
-    // set this.argv for testing purposes
-    return this.argv || process.argv.slice(2);
-}
 
 /**
  * Parses command-line arguments
  * @param {object} opts
+ * @param {?Array} argv argument array (default: process.argv(2..))
  * @returns {{opt: {}, args: Array}}
  */
-OptionsParser.prototype.parse = function(opts)
+OptionsParser.prototype.parse = function(opts, argv)
 {
+
     opts = opts || {};
+    argv = argv || process.argv.slice(2);
     var result = {};
 
     var args = [];
@@ -46,7 +43,7 @@ OptionsParser.prototype.parse = function(opts)
     var expectsArg = false;
 
     // helper function for handling argument aliases and values
-    var process = function(arg)
+    var lookupArg = function(arg)
     {
         if(arg in opts)
         {
@@ -80,12 +77,12 @@ OptionsParser.prototype.parse = function(opts)
     }
 
     // loop over all arguments
-    this.getArgv().forEach(function(arg){
+    argv.forEach(function(arg){
         // short param
         if(arg.length == 2 && arg[0] == '-' && this.isalnum(arg, 1))
         {
             if(expectsArg) (function(arg) { throw new Error(util.format(this.err_required, arg)); })(last);
-            if(!process(arg[1]))
+            if(!lookupArg(arg[1]))
                 throw new Error(util.format(this.err_unknown, arg));
 
             if(!expectsArg) setResult(last, true);
@@ -97,7 +94,7 @@ OptionsParser.prototype.parse = function(opts)
             if(expectsArg) throw new Error(util.format(this.err_required, last));
             var parts = arg.substr(2).split('=');
             arg = parts.shift();
-            if(!process(arg))
+            if(!lookupArg(arg))
                 throw new Error(util.format(this.err_unknown, "--" + arg));
 
             if(expectsArg) {
