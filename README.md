@@ -34,3 +34,39 @@ would produce
   args: [ 'output.txt' ] }
 ```
 
+# Reference
+
+```javascript
+options.parse(opts);
+options.parse(opts, argv);
+options.parse(opts, error);
+options.parse(opts, argv, error);
+```
+
+The first argument to .parse(...) is always the options object defining what to look for. Every key in the options object denotes the name of the option. The value is another object that can contain one of the following options
+
+```javascript
+{ 
+  short: [char],     // short alias for this option (must have length = 1),
+  
+  required: [bool],  // if set to true, this option is required (default: false)
+  
+  flag: [bool],      // if true, this option takes no values. If false, this 
+                     // option expects a value (ie. --host www.example.com)
+                     // (default: false)
+  
+  default: [string], // default value of option if it is not present. 
+                     // does not make sense to use with flag or required
+  
+  multi: [bool]      // If true, this option can be specified multiple times
+                     // and the resulting value will be an array (default: false)
+                     // If false, later options take precedence over earlier options
+}
+```  
+
+You can pass an argv array as the second argument (optional). It should not contain the interpreter (node)
+and script name. This value defaults to process.argv.slice(2)
+
+The error parameter is a callback to use when errors are encountered. If nothing is provided, the default error handling will throw an exception.
+
+
