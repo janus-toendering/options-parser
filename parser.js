@@ -104,23 +104,25 @@ OptionsParser.prototype.parse = function(opts, argv, error)
     }
 
     // loop over all arguments
-    argv.forEach(function(arg){
+    for(var i = 0; i < argv.length; i++) {
+        var arg = argv[i];
+
         // short param
         if(arg.length == 2 && arg[0] == '-' && this.isalnum(arg, 1))
         {
-            if(expectsArg) error({required: last});
-            if(!lookupArg(arg[1])) error({unknown: arg});
+            if(expectsArg) return error({required: last});
+            if(!lookupArg(arg[1])) return error({unknown: arg});
             if(!expectsArg) setResult(last, true);
         }
 
         // long param
         else if(arg.length > 2 && arg[0] == '-' && arg[1] == '-' && this.isalnum(arg, 2))
         {
-            if(expectsArg) error({required: last});
+            if(expectsArg) return error({required: last});
             var parts = arg.substr(2).split('=');
             arg = parts.shift();
             if(!lookupArg(arg))
-                error({unknown: '--' + arg});
+                return error({unknown: '--' + arg});
 
             if(expectsArg) {
                 // is parameter of type --param=value ?
@@ -139,7 +141,7 @@ OptionsParser.prototype.parse = function(opts, argv, error)
                         setResult(arg, true);
                     else
                         // is parameter of type --param=value but shouldn't?
-                        error({argument: arg});
+                        return error({argument: arg});
                 }
                 else
                     setResult(arg, true);
@@ -157,11 +159,11 @@ OptionsParser.prototype.parse = function(opts, argv, error)
         else {
             args.push(arg);
         }
-    }, this);
+    }
 
     if(expectsArg)
     {
-        error({required: last});
+        return error({required: last});
     }
 
     var requiredParams = [];
@@ -176,7 +178,7 @@ OptionsParser.prototype.parse = function(opts, argv, error)
 
     if(requiredParams.length > 0)
     {
-        error({missing: requiredParams});
+        return error({missing: requiredParams});
     }
 
     return {
