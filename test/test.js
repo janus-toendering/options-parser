@@ -2,6 +2,7 @@ var should = require('should');
 //var Scanner = require('../scanner');
 //var TokenType = require('../tokentype');
 var parser = require('../parser.js');
+var tokenizer = require('../tokenizer.js');
 
 describe("OptionsParser", function(){
 
@@ -128,6 +129,15 @@ describe("OptionsParser", function(){
             argv = ['--long=false'];
             parser.parse(opts, argv).opt.should.have.property('long', false);
         });
+
+        it("should support a string argument for argv", function(){
+            var opts = { param: true, a: { flag: true }, something: { flag: true } };
+            var result = parser.parse(opts, '--param=value -a --something input.txt');
+            result.opt.should.have.property('param', 'value');
+            result.opt.should.have.property('a', true);
+            result.opt.should.have.property('something', true);
+            result.args.should.eql(['input.txt']);
+        });
     });
 
     it("should parse --key=value params", function(){
@@ -192,6 +202,103 @@ describe("OptionsParser", function(){
 
     it("should not throw when passed an error handler as second argument", function(){
         (function() { parser.parse({'somearg': { required: true }}, function(e){}) }).should.not.throw();
+
+    });
+});
+
+
+describe("Tokenizer", function(){
+    describe("allTokens", function(){
+        it("should split words on whitespace boundries", function(){
+            var input = 'trying is  the   first step to failure --homer simpson';
+            var expected = ['trying', 'is', 'the', 'first', 'step', 'to', 'failure', '--homer', 'simpson'];
+            var result = tokenizer.create(input).allTokens();
+            result.should.eql(expected);
+        });
+
+        it("should handle the empty string", function(){
+            var input = '""';
+            var expected = [''];
+            var result = tokenizer.create(input).allTokens();
+            result.should.eql(expected);
+
+            input = "''";
+            expected = [''];
+            result = tokenizer.create(input).allTokens();
+            result.should.eql(expected);
+        });
+
+        it("should handle simple double quotes", function(){
+            var input = '"trying is" "" the   first st"ep" to failure --homer simpson';
+            var expected = ['trying is', '', 'the', 'first', 'step', 'to', 'failure', '--homer', 'simpson'];
+            var result = tokenizer.create(input).allTokens();
+            result.should.eql(expected);
+        });
+
+        it("should handle simple single quotes", function(){
+            var input = '\'trying is\' \'\' the   first st\'ep\' to failure --homer simpson';
+            var expected = ['trying is', '', 'the', 'first', 'step', 'to', 'failure', '--homer', 'simpson'];
+            var result = tokenizer.create(input).allTokens();
+            result.should.eql(expected);
+        });
+
+        it("should handle quotes in words", function(){
+            var input1 = 'words" are" meaningless';
+            var input2 = 'words\' are\' meaningless';
+            
+            var expected = ['words are', 'meaningless'];
+            
+            var result1 = tokenizer.create(input1).allTokens();
+            var result2 = tokenizer.create(input2).allTokens();
+            
+            result1.should.eql(expected);
+            result1.should.eql(result2);
+        });
+
+        it("should handle escapes outside of quotes", function(){
+            var input1 = "\\\\";
+            var input2 = "\\a";
+            var input3 = "\\\" another word";
+
+            var result1 = tokenizer.create(input1).allTokens();
+            var result2 = tokenizer.create(input2).allTokens();
+            var result3 = tokenizer.create(input3).allTokens();
+
+            result1.should.eql(["\\"]);
+            result2.should.eql(["a"]);
+            result3.should.eql(['"', "another", "word"]);
+        });
+
+        it("should handle escapes in double quotes", function(){
+            var input = '"a \\" is called a quote"';
+            var expected = ['a " is called a quote'];
+            var result = tokenizer.create(input).allTokens();
+            result.should.eql(expected);
+        });
+
+        it("should handle escapes in single quotes", function(){
+            var input = "'a \\ in single quotes'";
+            var expected = ['a \\ in single quotes'];
+            var result = tokenizer.create(input).allTokens();
+            result.should.eql(expected);
+        });
+
+        it("should handle space escapes", function(){
+            var input1 = 'word \\ word';
+            var input2 = 'word \\  word';
+
+            var result1 = tokenizer.create(input1).allTokens();
+            var result2 = tokenizer.create(input2).allTokens();
+
+            result1.should.eql(['word', ' word']);
+            result2.should.eql(['word', ' ', 'word']);
+        });
+
+        it("should handle empty input", function(){
+            var input = '';
+            var result = tokenizer.create(input).allTokens();
+            result.should.be.empty;
+        });
 
     });
 });
