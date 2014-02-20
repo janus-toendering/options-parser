@@ -138,72 +138,73 @@ describe("OptionsParser", function(){
             result.opt.should.have.property('something', true);
             result.args.should.eql(['input.txt']);
         });
+
+        it("should parse --key=value params", function(){
+            var argv = ['--key=value'];
+            parser.parse({"key": 1}, argv).opt.should.have.property("key", "value");
+        });
+
+        it("should let later params take precedence", function(){
+            var argv = ['-a', '1', '-a', '2'];
+            parser.parse({'a': 1}, argv).opt.should.have.property("a", 2);
+
+            var argv = ['--all', '1', '--all', '2'];
+            parser.parse({'all': 1}, argv).opt.should.have.property("all", 2);
+        });
+
+        it("should parse multi-params correctly", function(){
+            var argv = ['-a', '1', '-a', '2'];
+            parser.parse({'a': {multi:true}}, argv).opt.should.have.property("a", [1, 2]);
+
+            var argv = ['--all', '1', '--all', '2'];
+            parser.parse({'all': {multi:true}}, argv).opt.should.have.property("all", [1, 2]);
+        });
+
+        it("should parse '--user=janus --pass 123 janus.txt -r --input=1.txt -i 2.txt' correctly", function(){
+            var argv = ["--user=janus", "--pass", "123", "output.txt", "-r", "--input=1.txt", "-i", "2.txt"];
+
+            var result = parser.parse({
+                'user': {
+                    required: true
+                },
+                'pass': { required: true },
+                'r': { flag: true },
+                'input': {
+                    short: 'i',
+                    multi: true
+                }
+            }, argv);
+
+            result.opt.should.have.property("user","janus");
+            result.opt.should.have.property("pass","123");
+            result.opt.should.have.property("r", true);
+            result.opt.should.have.property("input", ["1.txt", "2.txt"]);
+            result.args.should.be.eql(["output.txt"]);
+
+        });
+
+        it("should use default values", function(){
+            var argv = [];
+            parser.parse({ "user": { default: "joe" }}, argv).opt.should.have.property("user", "joe");
+        });
+
+        it("should complain about missing required parameters", function(){
+            var argv = [];
+            (function() { parser.parse({'somearg': { required: true }}, argv) }).should.throw();
+        });
+
+        it("should not throw when passed an error handler", function(){
+            var argv = [];
+            (function() { parser.parse({'somearg': { required: true }}, argv, function(){}) }).should.not.throw();
+
+        });
+
+        it("should not throw when passed an error handler as second argument", function(){
+            (function() { parser.parse({'somearg': { required: true }}, function(e){}) }).should.not.throw();
+        });
+
     });
 
-    it("should parse --key=value params", function(){
-        var argv = ['--key=value'];
-        parser.parse({"key": 1}, argv).opt.should.have.property("key", "value");
-    });
-
-    it("should let later params take precedence", function(){
-        var argv = ['-a', '1', '-a', '2'];
-        parser.parse({'a': 1}, argv).opt.should.have.property("a", 2);
-
-        var argv = ['--all', '1', '--all', '2'];
-        parser.parse({'all': 1}, argv).opt.should.have.property("all", 2);
-    });
-
-    it("should parse multi-params correctly", function(){
-        var argv = ['-a', '1', '-a', '2'];
-        parser.parse({'a': {multi:true}}, argv).opt.should.have.property("a", [1, 2]);
-
-        var argv = ['--all', '1', '--all', '2'];
-        parser.parse({'all': {multi:true}}, argv).opt.should.have.property("all", [1, 2]);
-    });
-
-    it("should parse '--user=janus --pass 123 janus.txt -r --input=1.txt -i 2.txt' correctly", function(){
-        var argv = ["--user=janus", "--pass", "123", "output.txt", "-r", "--input=1.txt", "-i", "2.txt"];
-
-        var result = parser.parse({
-            'user': {
-                required: true
-            },
-            'pass': { required: true },
-            'r': { flag: true },
-            'input': {
-                short: 'i',
-                multi: true
-            }
-        }, argv);
-
-        result.opt.should.have.property("user","janus");
-        result.opt.should.have.property("pass","123");
-        result.opt.should.have.property("r", true);
-        result.opt.should.have.property("input", ["1.txt", "2.txt"]);
-        result.args.should.be.eql(["output.txt"]);
-
-    });
-
-    it("should use default values", function(){
-        var argv = [];
-        parser.parse({ "user": { default: "joe" }}, argv).opt.should.have.property("user", "joe");
-    });
-
-    it("should complain about missing required parameters", function(){
-        var argv = [];
-        (function() { parser.parse({'somearg': { required: true }}, argv) }).should.throw();
-    });
-
-    it("should not throw when passed an error handler", function(){
-        var argv = [];
-        (function() { parser.parse({'somearg': { required: true }}, argv, function(){}) }).should.not.throw();
-
-    });
-
-    it("should not throw when passed an error handler as second argument", function(){
-        (function() { parser.parse({'somearg': { required: true }}, function(e){}) }).should.not.throw();
-
-    });
 });
 
 
