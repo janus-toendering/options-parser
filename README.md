@@ -65,7 +65,11 @@ The first argument to .parse(...) is always the options object defining what to 
 ```  
 
 You can pass an argv array as the second argument (optional). It should not contain the interpreter (node)
-and script name. This value defaults to process.argv.slice(2)
+and script name. This value defaults to process.argv.slice(2).
+
+It is also possible to pass a string that will then be converted to the 
+corresponding argv array before it will be processed. This can be useful for
+reading command line parameters from a file.
 
 The error parameter is a callback to use when errors are encountered. If nothing is provided, the default error handling will throw an exception.
 

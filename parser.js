@@ -1,4 +1,5 @@
 var util = require('util');
+var tokenizer = require('./tokenizer');
 
 var OptionsParser = function()
 {
@@ -44,7 +45,7 @@ OptionsParser.prototype.defaultErrorHandler = function(err)
 /**
  * Parses command-line arguments
  * @param {object} opts
- * @param {?Array} argv argument array (default: process.argv(2..))
+ * @param {?Array|String} argv argument array (default: process.argv(2..))
  * @param {?Function} error callback handler for missing options etc (default: throw exception)
  * @returns {{opt: {}, args: Array}}
  */
@@ -53,7 +54,14 @@ OptionsParser.prototype.parse = function(opts, argv, error)
     opts = opts || {};
     // error can be passed as second argument if argv is left out
     error = (argv instanceof Function) ? /** @type {Function} */ (argv) : (error || this.defaultErrorHandler.bind(this));
-    argv = Array.isArray(argv) ? argv :  process.argv.slice(2);
+    
+    if(typeof argv == "string" || argv instanceof String)
+    {
+        argv = tokenizer.create(argv).allTokens();
+    } else 
+    {
+        argv = Array.isArray(argv) ? argv :  process.argv.slice(2);
+    }
 
     var result = {};
 
