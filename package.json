@@ -1,6 +1,6 @@
 {
     "name": "options-parser",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "description": "A full-featured no-nonsense command line parser with no external dependencies",
     "keywords": [
         "getopt","arguments"
