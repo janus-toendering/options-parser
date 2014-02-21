@@ -148,6 +148,12 @@ OptionsParser.prototype.parse = function(opts, argv, error)
             }
         }
 
+        else if (arg == '--')
+        {
+            args = args.concat(argv.slice(i+1));
+            break;
+        }
+
         // required argument
         else if(expectsArg)
         {

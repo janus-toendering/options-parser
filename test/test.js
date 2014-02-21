@@ -203,6 +203,15 @@ describe("OptionsParser", function(){
             (function() { parser.parse({'somearg': { required: true }}, function(e){}) }).should.not.throw();
         });
 
+        it("should not parse options after '--'' marker", function(){
+            var argv = ['-a', 'input.txt', '--', '--file-with-dashes.txt', '-b'];
+            var result = parser.parse({'a': { flag: true }, 'b': { flag: true }}, argv);
+            
+            result.opt.should.have.property('a', true);
+            result.opt.should.not.have.property('b', true);
+            result.args.should.eql(['input.txt', '--file-with-dashes.txt', '-b']);
+        });
+
     });
 
 });
