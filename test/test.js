@@ -217,6 +217,33 @@ describe("OptionsParser", function(){
             (function(){parser.parse({'a': { flag: true}}, argv); }).should.throw();
         });
 
+        it("should default to not accepting any options", function(){
+            var argv = ['input.txt', 'file2.txt'];
+            var result = parser.parse(false, argv);
+            result.args.should.eql(argv);
+        });
+
+        it("should complain about missing option value when passed a short option instead", function(){
+            var argv = ['-a', '-b'];
+            var opt = {a: { required: true }, b: { flag: true }};
+            parser.parse.bind(parser, opt, argv).should.throw();
+        });
+
+        it("should complain about missing option value when passed a long option instead", function(){
+            var argv = ['-a', '--long'];
+            var opt = {a: { required: true }, long: true};
+            parser.parse.bind(parser, opt, argv).should.throw();
+        });
+
+        it("should complain about passing an option value to a flag option", function(){
+            var argv = ['--long=value'];
+            parser.parse.bind(parser, { long: { flag: true }}, argv).should.throw();
+        });
+
+        it("should complain about missing option value for last parameter", function(){
+            var argv = ['--long'];
+            parser.parse.bind(parser, { long: true }, argv).should.throw();
+        });
     });
 
 });
