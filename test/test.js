@@ -212,6 +212,11 @@ describe("OptionsParser", function(){
             result.args.should.eql(['input.txt', '--file-with-dashes.txt', '-b']);
         });
 
+        it("should complain about short options with -- prefix", function(){
+            var argv = ['input.txt', '--a'];
+            (function(){parser.parse({'a': { flag: true}}, argv); }).should.throw();
+        });
+
     });
 
 });
