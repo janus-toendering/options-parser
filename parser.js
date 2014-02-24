@@ -121,6 +121,8 @@ OptionsParser.prototype.parse = function(opts, argv, error)
             if(expectsArg) return error({required: last});
             var parts = arg.substr(2).split('=');
             arg = parts.shift();
+            if(arg.length < 2)
+                return error({unknown: '--' + arg});
             if(!lookupArg(arg))
                 return error({unknown: '--' + arg});
 
