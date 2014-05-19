@@ -3,6 +3,11 @@ options-parser
 
 A full-featured no-nonsense command line parser for node with no external dependencies
 
+# Installation
+```sh
+$ npm install --save options-parser
+```
+
 # Example
 ```javascript
 
