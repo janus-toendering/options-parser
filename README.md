@@ -6,7 +6,7 @@ A full-featured no-nonsense command line parser for node with no external depend
 # Example
 ```javascript
 
-var options = require('./parser');
+var options = require('options-parser');
 
 var result = options.parse({
   user:  { required: true },
