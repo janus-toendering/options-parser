@@ -7,7 +7,7 @@ var OptionsParser = function()
 
 OptionsParser.prototype.err_unknown = "Unknown option %s";
 
-OptionsParser.prototype.err_required = "Option %s missing required parameter";
+OptionsParser.prototype.err_required = "Option %s missing required argument";
 
 OptionsParser.prototype.err_argument = "Options %s does not take an argument";
 
