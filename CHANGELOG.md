@@ -1,6 +1,12 @@
 Changelog
 =========
 
+## 0.3.0
+
+### Features
+
+* Add help screen generator.
+
 ## 0.2.0
 
 ### Features
