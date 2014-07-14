@@ -3,6 +3,7 @@ var should = require('should');
 //var TokenType = require('../tokentype');
 var parser = require('../parser.js');
 var tokenizer = require('../tokenizer.js');
+var util = require('util');
 
 describe("OptionsParser", function(){
 
@@ -244,6 +245,291 @@ describe("OptionsParser", function(){
             var argv = ['--long'];
             parser.parse.bind(parser, { long: true }, argv).should.throw();
         });
+
+        var ignoreOutput = function(){};
+        
+        it("should automatically invoke #help with showHelp set", function(){
+            var argv = '--help';
+            var helpInvoked = false;
+            parser.parse({
+                help: {
+                    showHelp: { 
+                        noExit: true, 
+                        callback: function(){ helpInvoked = true; },
+                        output: ignoreOutput
+                    },
+                    flag: true
+                }
+            }, argv);
+
+            helpInvoked.should.be.true;
+        });
+
+        it("should imply flag when showHelp is set", function(){
+            var argv = '--help';
+            var helpInvoked = false;
+            (function(){
+                parser.parse({
+                    help: {
+                        showHelp: { 
+                            noExit: true, 
+                            callback: function(){ helpInvoked = true; },
+                            output: ignoreOutput
+                        }
+                    }
+                }, argv)
+            }).should.not.throw();
+
+            helpInvoked.should.be.true;
+
+        });
+
+        it("should imply flag only when unset when showHelp is set", function(){
+            var argv = '--help';
+            (function(){
+                parser.parse({
+                    help: {
+                        showHelp: { 
+                            noExit: true, 
+                            output: ignoreOutput
+                        },
+                        flag: false
+                    }
+                }, argv)
+            }).should.throw();
+        });
+
+        it("should exit as default when showHelp is triggered", function(){
+            var _exit = process.exit;
+            var called = 'temp';
+            process.exit = function(code) { called = code; }
+
+            parser.parse({
+                help: {
+                    showHelp: { 
+                        output: ignoreOutput
+                    }
+                }
+            }, '--help');
+
+            called.should.be.equal(0);
+
+            process.exit = _exit;
+        });
+
+        it("should not auto-invoke help when help param is not passed", function(){
+            (function(){
+                parser.parse({
+                    help: {
+                        showHelp: { 
+                            output: ignoreOutput, 
+                            noExit: true, 
+                            callback: function(){
+                                throw new Error();
+                            } 
+                        }
+                    }
+                }, 'something.txt');
+            }).should.not.throw();
+        });
+
+        it("should invoke help if showHelp is true", function(){
+            var _exit = process.exit;
+            var _puts = util.puts;
+            var called = false;
+            process.exit = function(code) { called = true; }
+            util.puts = ignoreOutput;
+
+            parser.parse({
+                help: {
+                    showHelp: true
+                }
+            }, '--help');
+
+            util.puts = _puts;
+            process.exit = _exit;
+
+            called.should.be.true;
+
+        });
+    });
+
+    describe("#repeatChar_", function(){
+        it("should return the empty string", function(){
+
+            [0, -1].forEach(function(count){
+                var str = parser.repeatChar_(' ', count);
+                str.should.be.type('string');
+                str.should.have.length(0);
+            });
+
+        });
+
+        it("should return non-empty string", function(){
+            parser.repeatChar_('a', 3).should.be.equal('aaa');
+            parser.repeatChar_(' ', 5).should.be.equal('     ');
+        });
+
+    });
+
+    describe("#padString_", function()
+    {
+        it("should pad string to minimum length", function(){
+            parser.padString_('str', 5).should.be.equal('str  ');
+            parser.padString_('string', 5).should.be.equal('string');
+        })
+    });
+
+    describe("#fitString_", function(){
+        var str = 'one two three four five';
+
+        it("should not break shorter lines", function(){
+            parser.fitString_(str, str.length).should.have.length(1);
+            parser.fitString_(str, str.length + 10).should.have.length(1);
+        });
+
+        it("should break long lines on word boundries", function(){
+            parser.fitString_(str, 20).should.be.eql(['one two three four', 'five']);
+            parser.fitString_(str, 15).should.be.eql(['one two three', 'four five']);
+            parser.fitString_('12345 67890', 5).should.be.eql(['12345','67890']);
+        });
+
+        it("should only break on word boundries", function(){
+            parser.fitString_('abcdefghijklmnopqrstuvxyz', 5).should.have.length(1);
+            parser.fitString_(' abcdefghijklmnopqrstuvxyz', 5).should.have.length(1);
+            parser.fitString_('abcdefghijklmnopqrstuvxyz abcdefghijklmnopqrstuvxyz', 5).should.have.length(2);
+        });
+    });
+
+    describe("#help", function(){
+        
+        function redirectOutput(arr){
+            var push = arr.push.bind(arr);
+            return function(){
+                for(var i = 0; i < arguments.length; i++)
+                    push(arguments[i]);
+            };
+        }
+
+        // we could do these tests slightly better 
+        var opts = {
+            'list': {
+                flag: true,
+                help: 'toggle list format',
+                _result: ['  --list                  toggle list format']
+            },
+            'sync': {
+                short: 's',
+                flag: true,
+                help: 'if specified, synchronize all files from remote server to local directory before doing any other operation',
+                _result: ['  --sync, -s              if specified, synchronize all files from remote server',
+                          '                          to local directory before doing any other operation']
+            },
+            'as': { 
+                flag: true, 
+                _result: ['  --as                    ']
+            }, 
+            'p': { 
+                flag: true,
+                _result: ['  -p                      ']
+            },
+            'longarg': { 
+                help: 'some long argument',
+                short: 'l',
+                _result: ['  --longarg VAL, -l VAL   some long argument'] 
+            },
+            'with-value': {
+                help: 'use value for input',
+                _result: ['  --with-value VAL        use value for input']
+            }
+        };
+
+        it("should show all params by default", function(){
+            var arr = [];
+            var options = {
+                columns: 80,
+                output: redirectOutput(arr)
+            }
+
+            parser.help(opts, options);
+
+            arr.should.have.length(7);
+
+            for(var key in opts)
+                opts[key]._result.forEach(function(line){
+                    arr.should.containEql(line);
+                });
+        });
+
+        it("should use options.paddingLeft if specified", function(){
+            var arr = [];
+            var options = {
+                columns: 80,
+                paddingLeft: 1,
+                output: redirectOutput(arr)
+            }
+
+            parser.help(opts, options);
+
+            arr.should.have.length(7);
+
+            for(var key in opts)
+                opts[key]._result.forEach(function(line){
+                    arr.should.containEql(line.substring(1));
+                });
+        });
+
+        it("should show banner when specified", function(){
+            var arr = [];
+            var options = {
+                columns: 80,
+                output: redirectOutput(arr),
+                banner: 'This is a banner'
+            };
+
+            parser.help(opts, options);
+            arr.length.should.be.greaterThan(0);
+            arr[0].should.be.eql(options.banner);
+        });
+
+        it("should skip options with no help text if options.skipEmpty is specified", function(){
+            var arr = [];
+            var options = {
+                columns: 80,
+                output: redirectOutput(arr),
+                skipEmpty: true
+            };
+
+            parser.help(opts, options);
+            arr.should.have.length(5);
+            for(var key in opts)
+            {
+                if(opts[key].help)
+                    opts[key]._result.forEach(function(line){
+                        arr.should.containEql(line);
+                    });
+            }
+        });
+
+        it("should use .varName value instead of VAL if specified", function(){
+            var arr = [];
+            var options = {
+                output: redirectOutput(arr),
+                columns: 200
+            };
+
+            parser.help({
+                'file': {
+                    short: 'f',
+                    varName: 'FILE',
+                    help: 'filename to process'
+                }
+            }, options);
+
+            arr.should.have.length(1);
+            arr[0].should.eql('  --file FILE, -f FILE   filename to process');
+        });
+
     });
 
 });

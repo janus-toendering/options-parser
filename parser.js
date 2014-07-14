@@ -38,6 +38,7 @@ OptionsParser.prototype.defaultErrorHandler = function(err)
         throw new Error(util.format(this.err_argument, err.argument));
     if(err.missing)
         throw new Error(util.format(this.err_missing, err.missing.join(', ')));
+    /* istanbul ignore else */
     if(err.unknown)
         throw new Error(util.format(this.err_unknown, err.unknown));
 };
@@ -49,7 +50,7 @@ OptionsParser.prototype.defaultErrorHandler = function(err)
  * @param {?Function} error callback handler for missing options etc (default: throw exception)
  * @returns {{opt: {}, args: Array}}
  */
-OptionsParser.prototype.parse = function(opts, argv, error)
+OptionsParser.prototype.parse_ = function(opts, argv, error)
 {
     opts = opts || {};
     // error can be passed as second argument if argv is left out
@@ -174,6 +175,7 @@ OptionsParser.prototype.parse = function(opts, argv, error)
         return error({required: last});
     }
 
+    // look for missing parameters that have been marked as required
     var requiredParams = [];
     for(var arg in opts)
     {
@@ -195,9 +197,179 @@ OptionsParser.prototype.parse = function(opts, argv, error)
     };
 };
 
-OptionsParser.prototype.help = function()
+/**
+ * Finds help arguments in opts
+ * @param {object} opts
+ * @return Array
+ * @remarks changes the opts in place to imply "flag" on help params
+ */
+OptionsParser.prototype.processHelpArgs_ = function(opts)
 {
-    // TODO
+    var helpArgs = [];
+    for(var argName in opts)
+    {
+        if(opts[argName].showHelp) 
+        {
+            helpArgs.push({ name: argName, options: opts[argName].showHelp });
+            
+            // set flag to true if omitted from help params
+            if(!('flag' in opts[argName]))
+            {
+                opts[argName].flag = true;
+            }
+       }
+    }
+    return helpArgs;
+};
+
+/**
+ * Parses command-line arguments
+ * @param {object} opts
+ * @param {?Array|String} argv argument array (default: process.argv(2..))
+ * @param {?Function} error callback handler for missing options etc (default: throw exception)
+ * @returns {{opt: {}, args: Array}}
+ */
+OptionsParser.prototype.parse = function(opts, argv, error)
+{
+    var helpArgs = this.processHelpArgs_(opts);
+    var result = this.parse_(opts, argv, error);
+
+    helpArgs.some(function(arg){
+        if(result.opt[arg.name])
+        {
+            this.help(opts, arg.options);
+            if(typeof arg.options.callback === "function")
+                arg.options.callback.call();
+
+            if(!arg.options.noExit)
+                process.exit(0);
+        }
+    }, this);
+
+    return result;
+};
+
+/**
+ * Create new string with ch repeated count times
+ * @param {String} ch character to repeat (should have length = 1)
+ * @param {Number} count number of repetitions of ch
+ * @return {String}
+ */
+OptionsParser.prototype.repeatChar_ = function(ch, count)
+{
+    var s = '';
+    for(var i = 0; i < count; i++)
+        s += ch;
+    return s;
+};
+
+/**
+ * Pad a string with spaces up to a minimum length 
+ * @param {String} s string to pad
+ * @param {Number} len minimum length
+ * @return {String} s right-padded with spaces up to len
+ */
+OptionsParser.prototype.padString_ = function(s, len)
+{
+    return s + this.repeatChar_(' ', len - s.length);
+};
+
+/**
+ * Break a string into lines of len characters and break on spaces
+ * @param {String} s 
+ * @param {Number} len
+ * @return {Array.<String>}
+ * @remarks it might return longers lines if s contains words longer than len
+ */
+OptionsParser.prototype.fitString_ = function(s, len)
+{
+    s = s.trim();
+    if(s.length <= len) return [s];
+
+    var result = [];
+    while(s.length > len)
+    {
+        var i = len
+        for(; s[i] != ' ' && i >= 0; i--) 
+            /* empty loop */ ;
+
+        if(i == -1)
+        {
+            for(i = len + 1; s[i] != ' ' && i < s.length; i++) 
+                /* empty loop */ ;
+            
+            if(i == s.length)
+            {
+                result.push(s);
+                return result;
+            }
+        }
+        result.push(s.substr(0, i));
+        s = s.substr(i).trimLeft();
+    }
+    result.push(s);
+    return result;
+};
+
+
+/**
+ * Show help for options
+ * @param {object} opts
+ * @param {object} options
+ */
+OptionsParser.prototype.help = function(opts, options)
+{
+    if(typeof options !== 'object')
+        options = {};
+
+    var output = options.output || util.puts;
+    var paddingLeft = '  ';
+    if(typeof options.paddingLeft === "number" && options.paddingLeft >= 0)
+        paddingLeft = this.repeatChar_(' ', options.paddingLeft);
+
+    // compute maximum argument length
+    var maxArgLength = Object.keys(opts).reduce(function(prev, optName){
+        var len = optName.length + (opts[optName].short ? 4 : 0);
+        if(opts[optName].flag !== true)
+        {
+            var valLen = (opts[optName].varName ? opts[optName].varName.length : 3) + 1;
+            if(opts[optName].short) valLen *= 2;
+            len += valLen;
+        }
+        return (prev < len) ? len : prev;
+    }, 0);
+    
+    // make room for "--" before arguments and 2 spaces for left padding
+    maxArgLength += 2 + paddingLeft.length;
+
+    var middlePadding = options.separator || '   ' ;
+    var maxTextLength = (options.columns || process.stdout.columns) - maxArgLength - middlePadding.length;
+
+    if(options.banner) output(options.banner);
+
+    for(var optName in opts)
+    {
+        var append = "";
+        var shortName = "";
+        var name = paddingLeft + (optName.length == 1 ? '-' : '--') + optName;
+        if(opts[optName].short) shortName = ', -' + opts[optName].short;
+        if(opts[optName].flag !== true)
+            append = " " + (opts[optName].varName || "VAL");
+
+        var name = name + append + (shortName ? shortName + append : "");
+
+        var helpText = this.fitString_(opts[optName].help || '', maxTextLength);
+        if(helpText == '' && options.skipEmpty) continue;
+        var firstLine = helpText.shift();
+        var line = this.padString_(name, maxArgLength) + middlePadding + firstLine
+        output(line);
+
+        var padString = this.repeatChar_(' ', maxArgLength + middlePadding.length);
+        helpText.forEach(function(line){
+            output(padString + line);
+        }, this);
+    }
 };
 
 module.exports = new OptionsParser();
+
