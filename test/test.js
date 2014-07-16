@@ -530,6 +530,43 @@ describe("OptionsParser", function(){
             arr[0].should.eql('  --file FILE, -f FILE   filename to process');
         });
 
+        it("should replace %REQ_OPTS% in banner with required options", function(){
+            var arr = [];
+            var options = {
+                output: redirectOutput(arr),
+                columns: 80,
+                banner: 'node test.js %REQ_OPTS% [options] filename'
+            };
+
+            parser.help({
+                'force': {
+                    short: 'f',
+                    required: true,
+                    flag: true
+                }
+            }, options);
+
+            arr[0].should.eql('node test.js -f [options] filename');
+        });
+
+        it("should remove %REQ_OPTS% in banner if no required options exist", function(){
+            var arr = [];
+            var options = {
+                output: redirectOutput(arr),
+                columns: 80,
+                banner: 'node test.js %REQ_OPTS% [options] filename'
+            };
+
+            parser.help({
+                'force': {
+                    short: 'f',
+                    flag: true
+                }
+            }, options);
+
+            arr[0].should.eql('node test.js [options] filename');
+        });
+
     });
 
 });

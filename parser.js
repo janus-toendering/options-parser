@@ -369,6 +369,47 @@ OptionsParser.prototype.getHelpOptions_ = function(options)
 };
 
 /**
+ * Get banner with variables in options.banner replaced
+ * @param {object} opts
+ * @param {object} options
+ * @return {false|string}
+ */
+OptionsParser.prototype.getHelpBanner_ = function(opts, options)
+{
+    var banner = options.banner;
+    if(typeof banner === "undefined") 
+        return false;
+
+    var variables = {
+        REQ_OPTS: function(){
+            return Obj.reduce(opts, function(prev, key, val){
+                if(!val.required)
+                    return prev;
+
+                var result = val.short ? '-' + val.short : '--' + key;
+                if(!val.flag)
+                    result += " " + (val.varName || "VAL");
+
+                return result;
+            }, "");
+        }
+    };
+
+    for(var key in variables)
+    {
+        var v = ' %' + key + '%';
+        if(banner.indexOf(v) !== -1)
+        {
+            var val = variables[key]();
+            if(val != "") val = " " + val;
+            banner = banner.replace(v, val);
+        }
+    }
+
+    return banner;
+};
+
+/**
  * Show help for options
  * @param {object} opts
  * @param {object} options
@@ -381,7 +422,7 @@ OptionsParser.prototype.help = function(opts, options)
     var maxArgLength  = this.getArgumentsWidth_(opts) + options.paddingLeft;
     var maxTextLength = options.columns - maxArgLength - options.separator.length;
 
-    if(options.banner) options.output(options.banner);
+    if(options.banner) options.output(this.getHelpBanner_(opts, options));
 
     for(var optName in opts)
     {
