@@ -1,6 +1,19 @@
 var util = require('util');
 var tokenizer = require('./tokenizer');
 
+Obj = {
+    // classic reduce (foldl) function but for objects
+    reduce: function(obj, cb, initial, ctx)
+    {
+        var acc = initial;
+        for(var key in obj)
+            acc = cb.call(ctx, acc, key, obj[key]);
+        return acc;
+    }
+
+};
+
+
 var OptionsParser = function()
 {
 };
@@ -318,12 +331,12 @@ OptionsParser.prototype.fitString_ = function(s, len)
  */
 OptionsParser.prototype.getArgumentsWidth_ = function(opts)
 {
-    var maxArgLength = Object.keys(opts).reduce(function(prev, optName){
-        var len = optName.length + (opts[optName].short ? 4 : 0);
-        if(opts[optName].flag !== true)
+    var maxArgLength = Obj.reduce(opts, function(prev, name, opt){
+        var len = name.length + (opt.short ? 4 : 0);
+        if(opt.flag !== true)
         {
-            var valLen = (opts[optName].varName ? opts[optName].varName.length : 3) + 1;
-            if(opts[optName].short) valLen *= 2;
+            var valLen = (opt.varName ? opt.varName.length : 3) + 1;
+            if(opt.short) valLen *= 2;
             len += valLen;
         }
         return (prev < len) ? len : prev;
