@@ -3,7 +3,7 @@
     "version": "0.3.0",
     "description": "A full-featured no-nonsense command line parser with no external dependencies",
     "keywords": [
-        "getopt","arguments"
+        "getopt","arguments","options","command-line","option parser"
     ],
     "license": "BSD-3-Clause",
     "author": "Janus Tøndering <janus@toendering.dk>",
