@@ -311,23 +311,13 @@ OptionsParser.prototype.fitString_ = function(s, len)
     return result;
 };
 
-
 /**
- * Show help for options
+ * Get maximum width of arguments
  * @param {object} opts
- * @param {object} options
+ * @return {Number}
  */
-OptionsParser.prototype.help = function(opts, options)
+OptionsParser.prototype.getArgumentsWidth_ = function(opts)
 {
-    if(typeof options !== 'object')
-        options = {};
-
-    var output = options.output || util.puts;
-    var paddingLeft = '  ';
-    if(typeof options.paddingLeft === "number" && options.paddingLeft >= 0)
-        paddingLeft = this.repeatChar_(' ', options.paddingLeft);
-
-    // compute maximum argument length
     var maxArgLength = Object.keys(opts).reduce(function(prev, optName){
         var len = optName.length + (opts[optName].short ? 4 : 0);
         if(opts[optName].flag !== true)
@@ -338,36 +328,73 @@ OptionsParser.prototype.help = function(opts, options)
         }
         return (prev < len) ? len : prev;
     }, 0);
-    
-    // make room for "--" before arguments and 2 spaces for left padding
-    maxArgLength += 2 + paddingLeft.length;
+    return maxArgLength + 2;
+};
 
-    var middlePadding = options.separator || '   ' ;
-    var maxTextLength = (options.columns || process.stdout.columns) - maxArgLength - middlePadding.length;
+/**
+ * Get default .help options
+ * @params {object} options
+ * @return {object} 
+ */
+OptionsParser.prototype.getHelpOptions_ = function(options)
+{
+    if(typeof options !== 'object') options = {};
+    return {
+        output: 
+            options.output || util.puts,
+        paddingLeft: 
+            (typeof options.paddingLeft === "number" && options.paddingLeft >= 0) ? options.paddingLeft : 2,
+        separator: 
+            options.separator || '   ',
+        columns: 
+            options.columns || process.stdout.columns,
+        banner:
+            options.banner,
+        skipEmpty:
+            options.skipEmpty
+    };
+};
 
-    if(options.banner) output(options.banner);
+/**
+ * Show help for options
+ * @param {object} opts
+ * @param {object} options
+ */
+OptionsParser.prototype.help = function(opts, options)
+{
+    options = this.getHelpOptions_(options);
+
+    var paddingLeft   = this.repeatChar_(' ', options.paddingLeft);
+    var maxArgLength  = this.getArgumentsWidth_(opts) + options.paddingLeft;
+    var maxTextLength = options.columns - maxArgLength - options.separator.length;
+
+    if(options.banner) options.output(options.banner);
 
     for(var optName in opts)
     {
-        var append = "";
-        var shortName = "";
-        var name = paddingLeft + (optName.length == 1 ? '-' : '--') + optName;
-        if(opts[optName].short) shortName = ', -' + opts[optName].short;
-        if(opts[optName].flag !== true)
-            append = " " + (opts[optName].varName || "VAL");
-
-        var name = name + append + (shortName ? shortName + append : "");
-
+        // fit help text to column width 
         var helpText = this.fitString_(opts[optName].help || '', maxTextLength);
-        if(helpText == '' && options.skipEmpty) continue;
-        var firstLine = helpText.shift();
-        var line = this.padString_(name, maxArgLength) + middlePadding + firstLine
-        output(line);
+        if(helpText == '' && options.skipEmpty) // skip empty help text?
+            continue;
 
-        var padString = this.repeatChar_(' ', maxArgLength + middlePadding.length);
-        helpText.forEach(function(line){
-            output(padString + line);
-        }, this);
+        // create options help string
+        var varName = (opts[optName].flag !== true) ? " " + (opts[optName].varName || "VAL") : "";
+        var name = paddingLeft + (optName.length == 1 ? '-' : '--') + optName + varName;
+        if(opts[optName].short) 
+            name += ', -' + opts[optName].short + varName;
+
+        // output options and (first line of) help text
+        var line = this.padString_(name, maxArgLength) + options.separator + helpText.shift();
+        options.output(line);
+
+        // print addional help text lines if it didn't fit in one line
+        if(helpText.length)
+        {
+            var padString = this.repeatChar_(' ', maxArgLength + options.separator.length);
+            helpText.forEach(function(line){
+                options.output(padString + line);
+            }, this);
+        }
     }
 };
 
