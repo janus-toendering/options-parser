@@ -7,7 +7,7 @@
     ],
     "license": "BSD-3-Clause",
     "author": "Janus Tøndering <janus@toendering.dk>",
-    "main": "parser.js",
+    "main": "options-parser.js",
     "repository": {
         "type": "git",
         "url": "http://github.com/janus-toendering/options-parser.git"

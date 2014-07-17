@@ -1,7 +1,5 @@
 var should = require('should');
-//var Scanner = require('../scanner');
-//var TokenType = require('../tokentype');
-var parser = require('../parser.js');
+var parser = require('../options-parser.js');
 var tokenizer = require('../tokenizer.js');
 var util = require('util');
 
