@@ -1,7 +1,8 @@
+var util = require('util');
 var should = require('should');
 var parser = require('../options-parser.js');
 var tokenizer = require('../tokenizer.js');
-var util = require('util');
+var helper = require('../helper.js')
 
 describe("OptionsParser", function(){
 
@@ -352,11 +353,11 @@ describe("OptionsParser", function(){
         });
     });
 
-    describe("#repeatChar_", function(){
+    describe("#repeat", function(){
         it("should return the empty string", function(){
 
             [0, -1].forEach(function(count){
-                var str = parser.repeatChar_(' ', count);
+                var str = helper.String.repeat(' ', count);
                 str.should.be.type('string');
                 str.should.have.length(0);
             });
@@ -364,38 +365,38 @@ describe("OptionsParser", function(){
         });
 
         it("should return non-empty string", function(){
-            parser.repeatChar_('a', 3).should.be.equal('aaa');
-            parser.repeatChar_(' ', 5).should.be.equal('     ');
+            helper.String.repeat('a', 3).should.be.equal('aaa');
+            helper.String.repeat(' ', 5).should.be.equal('     ');
         });
 
     });
 
-    describe("#padString_", function()
+    describe("#pad", function()
     {
         it("should pad string to minimum length", function(){
-            parser.padString_('str', 5).should.be.equal('str  ');
-            parser.padString_('string', 5).should.be.equal('string');
+            helper.String.pad('str', 5).should.be.equal('str  ');
+            helper.String.pad('string', 5).should.be.equal('string');
         })
     });
 
-    describe("#fitString_", function(){
+    describe("#fitWidth", function(){
         var str = 'one two three four five';
 
         it("should not break shorter lines", function(){
-            parser.fitString_(str, str.length).should.have.length(1);
-            parser.fitString_(str, str.length + 10).should.have.length(1);
+            helper.String.fitWidth(str, str.length).should.have.length(1);
+            helper.String.fitWidth(str, str.length + 10).should.have.length(1);
         });
 
         it("should break long lines on word boundries", function(){
-            parser.fitString_(str, 20).should.be.eql(['one two three four', 'five']);
-            parser.fitString_(str, 15).should.be.eql(['one two three', 'four five']);
-            parser.fitString_('12345 67890', 5).should.be.eql(['12345','67890']);
+            helper.String.fitWidth(str, 20).should.be.eql(['one two three four', 'five']);
+            helper.String.fitWidth(str, 15).should.be.eql(['one two three', 'four five']);
+            helper.String.fitWidth('12345 67890', 5).should.be.eql(['12345','67890']);
         });
 
         it("should only break on word boundries", function(){
-            parser.fitString_('abcdefghijklmnopqrstuvxyz', 5).should.have.length(1);
-            parser.fitString_(' abcdefghijklmnopqrstuvxyz', 5).should.have.length(1);
-            parser.fitString_('abcdefghijklmnopqrstuvxyz abcdefghijklmnopqrstuvxyz', 5).should.have.length(2);
+            helper.String.fitWidth('abcdefghijklmnopqrstuvxyz', 5).should.have.length(1);
+            helper.String.fitWidth(' abcdefghijklmnopqrstuvxyz', 5).should.have.length(1);
+            helper.String.fitWidth('abcdefghijklmnopqrstuvxyz abcdefghijklmnopqrstuvxyz', 5).should.have.length(2);
         });
     });
 

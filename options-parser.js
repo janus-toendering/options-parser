@@ -1,19 +1,10 @@
 var util = require('util');
 var tokenizer = require('./tokenizer');
 var parser = require('./parser');
+var helper = require('./helper.js');
 
-Obj = {
-    // classic reduce (foldl) function but for objects
-    reduce: function(obj, cb, initial, ctx)
-    {
-        var acc = initial;
-        for(var key in obj)
-            acc = cb.call(ctx, acc, key, obj[key]);
-        return acc;
-    }
-
-};
-
+var Str = helper.String;
+var Obj = helper.Object;
 
 var OptionsParser = function()
 {
@@ -109,67 +100,6 @@ OptionsParser.prototype.parse = function(opts, argv, error)
     return result;
 };
 
-/**
- * Create new string with ch repeated count times
- * @param {String} ch character to repeat (should have length = 1)
- * @param {Number} count number of repetitions of ch
- * @return {String}
- */
-OptionsParser.prototype.repeatChar_ = function(ch, count)
-{
-    var s = '';
-    for(var i = 0; i < count; i++)
-        s += ch;
-    return s;
-};
-
-/**
- * Pad a string with spaces up to a minimum length 
- * @param {String} s string to pad
- * @param {Number} len minimum length
- * @return {String} s right-padded with spaces up to len
- */
-OptionsParser.prototype.padString_ = function(s, len)
-{
-    return s + this.repeatChar_(' ', len - s.length);
-};
-
-/**
- * Break a string into lines of len characters and break on spaces
- * @param {String} s 
- * @param {Number} len
- * @return {Array.<String>}
- * @remarks it might return longers lines if s contains words longer than len
- */
-OptionsParser.prototype.fitString_ = function(s, len)
-{
-    s = s.trim();
-    if(s.length <= len) return [s];
-
-    var result = [];
-    while(s.length > len)
-    {
-        var i = len
-        for(; s[i] != ' ' && i >= 0; i--) 
-            /* empty loop */ ;
-
-        if(i == -1)
-        {
-            for(i = len + 1; s[i] != ' ' && i < s.length; i++) 
-                /* empty loop */ ;
-            
-            if(i == s.length)
-            {
-                result.push(s);
-                return result;
-            }
-        }
-        result.push(s.substr(0, i));
-        s = s.substr(i).trimLeft();
-    }
-    result.push(s);
-    return result;
-};
 
 /**
  * Get maximum width of arguments
@@ -266,7 +196,7 @@ OptionsParser.prototype.help = function(opts, options)
 {
     options = this.getHelpOptions_(options);
 
-    var paddingLeft   = this.repeatChar_(' ', options.paddingLeft);
+    var paddingLeft   = Str.repeat(' ', options.paddingLeft);
     var maxArgLength  = this.getArgumentsWidth_(opts) + options.paddingLeft;
     var maxTextLength = options.columns - maxArgLength - options.separator.length;
 
@@ -279,7 +209,7 @@ OptionsParser.prototype.help = function(opts, options)
             continue;
 
         // fit help text to column width 
-        var helpText = this.fitString_(opt.help || '', maxTextLength);
+        var helpText = Str.fitWidth(opt.help || '', maxTextLength);
 
         // create options help string
         var varName = (opt.flag !== true) ? " " + (opt.varName || "VAL") : "";
@@ -288,13 +218,13 @@ OptionsParser.prototype.help = function(opts, options)
             name += ', -' + opt.short + varName;
 
         // output options and (first line of) help text
-        var line = this.padString_(name, maxArgLength) + options.separator + helpText.shift();
+        var line = Str.pad(name, maxArgLength) + options.separator + helpText.shift();
         options.output(line);
 
         // print addional help text lines if it didn't fit in one line
         if(helpText.length)
         {
-            var padString = this.repeatChar_(' ', maxArgLength + options.separator.length);
+            var padString = Str.repeat(' ', maxArgLength + options.separator.length);
             helpText.forEach(function(line){
                 options.output(padString + line);
             }, this);

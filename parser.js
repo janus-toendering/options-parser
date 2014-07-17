@@ -1,10 +1,4 @@
-function isalnum (str, i)
-{
-    var code = str.charCodeAt(i);
-    //        "0" <= code <= "9"           "A" <= code <= "Z"         "a" <= code <= "z"
-    return ((code > 47 && code < 58) || (code > 64 && code < 91) || code > 96 && code < 123);
-};
-
+var Str = require('./helper.js').String;
 
 /**
  * Parses command-line arguments
@@ -61,7 +55,7 @@ function parse (opts, argv, error)
         var arg = argv[i];
 
         // short param
-        if(arg.length == 2 && arg[0] == '-' && isalnum(arg, 1))
+        if(arg.length == 2 && arg[0] == '-' && Str.isAlphaNumericAt(arg, 1))
         {
             if(expectsArg) return error({required: last});
             if(!lookupArg(arg[1])) return error({unknown: arg});
@@ -69,7 +63,7 @@ function parse (opts, argv, error)
         }
 
         // long param
-        else if(arg.length > 2 && arg[0] == '-' && arg[1] == '-' && isalnum(arg, 2))
+        else if(arg.length > 2 && arg[0] == '-' && arg[1] == '-' && Str.isAlphaNumericAt(arg, 2))
         {
             if(expectsArg) return error({required: last});
             var parts = arg.substr(2).split('=');
