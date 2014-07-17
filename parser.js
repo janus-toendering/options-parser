@@ -377,8 +377,6 @@ OptionsParser.prototype.getHelpOptions_ = function(options)
 OptionsParser.prototype.getHelpBanner_ = function(opts, options)
 {
     var banner = options.banner;
-    if(typeof banner === "undefined") 
-        return false;
 
     var variables = {
         REQ_OPTS: function(){
@@ -390,6 +388,9 @@ OptionsParser.prototype.getHelpBanner_ = function(opts, options)
                 if(!val.flag)
                     result += " " + (val.varName || "VAL");
 
+                if(prev != "") 
+                    return prev + " " + result;
+                
                 return result;
             }, "");
         }

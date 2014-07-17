@@ -543,10 +543,17 @@ describe("OptionsParser", function(){
                     short: 'f',
                     required: true,
                     flag: true
+                },
+                'user': {
+                    required: true,
+                    varName: 'USERNAME'
+                },
+                'opt': {
+                    required: true
                 }
             }, options);
 
-            arr[0].should.eql('node test.js -f [options] filename');
+            arr[0].should.eql('node test.js -f --user USERNAME --opt VAL [options] filename');
         });
 
         it("should remove %REQ_OPTS% in banner if no required options exist", function(){
