@@ -427,16 +427,18 @@ OptionsParser.prototype.help = function(opts, options)
 
     for(var optName in opts)
     {
-        // fit help text to column width 
-        var helpText = this.fitString_(opts[optName].help || '', maxTextLength);
-        if(helpText == '' && options.skipEmpty) // skip empty help text?
+        var opt = opts[optName];
+        if(!opt.help && options.skipEmpty) // skip empty help text?
             continue;
 
+        // fit help text to column width 
+        var helpText = this.fitString_(opt.help || '', maxTextLength);
+
         // create options help string
-        var varName = (opts[optName].flag !== true) ? " " + (opts[optName].varName || "VAL") : "";
+        var varName = (opt.flag !== true) ? " " + (opt.varName || "VAL") : "";
         var name = paddingLeft + (optName.length == 1 ? '-' : '--') + optName + varName;
-        if(opts[optName].short) 
-            name += ', -' + opts[optName].short + varName;
+        if(opt.short) 
+            name += ', -' + opt.short + varName;
 
         // output options and (first line of) help text
         var line = this.padString_(name, maxArgLength) + options.separator + helpText.shift();
