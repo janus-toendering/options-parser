@@ -1,5 +1,5 @@
 var util = require('util');
-var tokenizer = require('./tokenizer');
+var tokenizer = require('./string_tokenizer');
 var parser = require('./parser');
 var helper = require('./helper.js');
 
@@ -73,14 +73,9 @@ OptionsParser.prototype.parse = function(opts, argv, error)
 
     // error can be passed as second argument if argv is left out
     error = (argv instanceof Function) ? /** @type {Function} */ (argv) : (error || this.defaultErrorHandler.bind(this));
-    
-    if(typeof argv == "string" || argv instanceof String)
-    {
-        argv = tokenizer.create(argv).allTokens();
-    } else 
-    {
-        argv = Array.isArray(argv) ? argv :  process.argv.slice(2);
-    }
+
+    if(argv === null || argv === undefined || argv instanceof Function)
+        argv = process.argv.slice(2);
 
     var helpArgs = this.processHelpArgs_(opts);
     var result = parser.parse(opts, argv, error);

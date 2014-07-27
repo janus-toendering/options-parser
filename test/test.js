@@ -1,7 +1,6 @@
 var util = require('util');
 var should = require('should');
 var parser = require('../options-parser.js');
-var tokenizer = require('../tokenizer.js');
 var helper = require('../helper.js')
 
 describe("OptionsParser", function(){
@@ -57,7 +56,7 @@ describe("OptionsParser", function(){
             result.args.should.be.empty;
         });
 
-        it("should throw on unexpected short arguments", function(){
+        it("should throw on unknown short argument", function(){
             var argv = ["-b"];
             (function(){ parser.parse({}, argv) }).should.throw(/Unknown option/);
         });
@@ -351,6 +350,19 @@ describe("OptionsParser", function(){
             called.should.be.true;
 
         });
+
+        it("should ignore empty arguments", function(){
+            var result = parser.parse({ i: false }, ['-i', '']);
+            result.opt.should.eql({i: true});
+        });
+
+        it("should handle default arguments for multi-params", function(){
+            var opt = {i: { multi: true, default: ['janus']}};
+            
+            parser.parse(opt, '').should.have.property('opt', { i: ['janus']});
+            parser.parse(opt, '-i a').should.have.property('opt', { i: ['a']});
+            parser.parse(opt, '-i a -i b').should.have.property('opt', { i: ['a', 'b']});
+        });
     });
 
     describe("#repeat", function(){
@@ -578,7 +590,9 @@ describe("OptionsParser", function(){
 });
 
 
-describe("Tokenizer", function(){
+describe("StringTokenizer", function(){
+    var tokenizer = require('../string_tokenizer.js');
+    
     describe("allTokens", function(){
         it("should split words on whitespace boundries", function(){
             var input = 'trying is  the   first step to failure --homer simpson';
@@ -670,7 +684,7 @@ describe("Tokenizer", function(){
             var result = tokenizer.create(input).allTokens();
             result.should.be.empty;
         });
-
     });
 });
+
 

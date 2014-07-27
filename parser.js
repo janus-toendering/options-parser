@@ -1,150 +1,200 @@
+var Token = require('./tokenizer').Token;
+var Tokenizer = require('./tokenizer').Tokenizer;
+var TokenType = require('./tokenizer').TokenType;
+
 var Str = require('./helper.js').String;
+var Obj = require('./helper.js').Object;
+
+function Parser(opts, argv, errorHandler)
+{
+    this.config = opts;
+    this.argv = argv;
+    this.errorHandler = errorHandler;
+
+    this.errors = {
+        required: [],
+        unknown: [],
+        expected_value: [],
+        unexpected_value: [],
+        invalid: []
+    };
+
+    this.result = {
+        opt: {},
+        args: []
+    };
+
+    this.generateAliasMap();
+    this.normalizeConfig();
+};
+
+/*
+ * Map aliases to long option names
+ */
+Parser.prototype.generateAliasMap = function()
+{
+    var map = {};
+    Obj.forEach(this.config, function(name, config){
+        if(config.short) 
+            map[config.short] = name;
+    }, this);
+    this.alias = map;
+};
+
+Parser.prototype.normalizeConfig = function()
+{
+    // stupid undocumented short-hands
+    // perhaps we should just remove this?
+    this.config = Obj.map(this.config, function(name, config){
+        if(config === true)
+            return { flag: false };
+        if(config === false)
+            return { flag: true };
+
+        return config;
+    }, this);
+};
+
+Parser.prototype.setDefaults = function()
+{
+    Obj.forEach(this.config, function(name, config){
+        if(config.default && !(name in this.result.opt))
+            this.result.opt[name] = config.default;
+    }, this);
+};
+
+Parser.prototype.addResultOption = function(name, value)
+{
+    var config = this.config[name];
+    if(config.multi)
+    {
+        if(name in this.result.opt) this.result.opt[name].push(value);
+        else this.result.opt[name] = [value];
+    }
+    else
+        this.result.opt[name] = value ;
+};
+
+Parser.prototype.addResultArg = function(value)
+{
+    this.result.args.push(value);
+};
 
 /**
- * Parses command-line arguments
- * @param {object} opts
- * @param {Array} argv argument array
- * @param {Function} error callback handler for missing options etc (default: throw exception)
- * @returns {{opt: {}, args: Array}}
+ * Compatibility error-handler 
+ * @param {String} type old error name
+ * @param {String} opt option name
  */
-function parse (opts, argv, error)
+Parser.prototype.invokeErrorHandler = function(type, opt)
 {
-    // error can be passed as second argument if argv is left out
-    var result = {};
+    var err = {};
+    err[type] = opt;
+    this.errorHandler.call(null, err);
+};
 
-    var args = [];
-    var last = null;
-    var expectsArg = false;
+/**
+ * Handle errors the "old" way to keep API compatibility
+ */
+Parser.prototype.handleErrors = function()
+{
+    this.errors.unexpected_value.forEach(this.invokeErrorHandler.bind(this, 'argument'));
+    this.errors.expected_value.forEach(this.invokeErrorHandler.bind(this, 'required'));
+    this.errors.unknown.forEach(this.invokeErrorHandler.bind(this, 'unknown'));
+    this.errors.required.forEach(this.invokeErrorHandler.bind(this, 'missing'));
+    this.errors.invalid.forEach(this.invokeErrorHandler.bind(this, 'unknown'));
+};
 
-    // helper function for handling argument aliases and values
-    var lookupArg = function(arg)
+Parser.prototype.getTruthValue = function(value)
+{
+    if(!value) return true;
+
+    var m = value.match(/^(yes|1|true)|(no|0|false)$/i);
+    if(!m) return null; else return !!m[1];
+};
+
+Parser.prototype.parse = function()
+{
+    var token, opt, val, argumentValue, config;
+
+    var tokenizer = new Tokenizer(this.argv);
+    while(!tokenizer.isEof())
     {
-        if(arg in opts)
-        {
-            expectsArg = (opts[arg] === 1) || !opts[arg].flag;
-            last = arg;
-            return arg;
-        }
-        else if (arg.length == 1)
-        {
-            for(var key in opts)
-                if(opts[key].short == arg)
-                {
-                    expectsArg = !(opts[key].flag);
-                    last = key;
-                    return arg;
-                }
-        }
-        return false;
-    }
+        token = tokenizer.next();
+        val = token.getValue();
+        argumentValue = '';
 
-    // helper function for setting arguments in result
-    var setResult = function(arg, value)
-    {
-        if(opts[arg].multi)
+        switch(token.getType())
         {
-            if(!result[arg]) result[arg] = [value];
-            else result[arg].push(value);
-        }
-        else
-            result[arg] = value;
-    }
-
-    // loop over all arguments
-    for(var i = 0; i < argv.length; i++) {
-        var arg = argv[i];
-
-        // short param
-        if(arg.length == 2 && arg[0] == '-' && Str.isAlphaNumericAt(arg, 1))
-        {
-            if(expectsArg) return error({required: last});
-            if(!lookupArg(arg[1])) return error({unknown: arg});
-            if(!expectsArg) setResult(last, true);
+            case TokenType.VALUE:
+                this.addResultArg(val);
+                continue;
+            case TokenType.SHORT_ARG:
+                opt = this.alias[val] || val;
+                break;
+            case TokenType.LONG_ARG:
+                opt = val;
+                break;
+            case TokenType.LONG_ARG_WITH_VALUE:
+                opt = val[0];
+                argumentValue = val[1];
+                break;
+            default:
+                this.errors.invalid.push(val);
+                continue;
         }
 
-        // long param
-        else if(arg.length > 2 && arg[0] == '-' && arg[1] == '-' && Str.isAlphaNumericAt(arg, 2))
+        config = this.config[opt];
+        if(config)
         {
-            if(expectsArg) return error({required: last});
-            var parts = arg.substr(2).split('=');
-            arg = parts.shift();
-            if(arg.length < 2)
-                return error({unknown: '--' + arg});
-            if(!lookupArg(arg))
-                return error({unknown: '--' + arg});
-
-            if(expectsArg) {
-                // is parameter of type --param=value ?
-                if(parts.length > 0) {
-                    setResult(arg, parts.join('='));
-                    expectsArg = false;
-                }
-            } else {
-                // is parameter of type --param=value?
-                if(parts.length > 0)
-                {
-                    var a = parts.join('=');
-                    if(/^(false|0|no)$/i.test(a))
-                        setResult(arg, false);
-                    else if(/^(true|1|yes)$/i.test(a))
-                        setResult(arg, true);
-                    else
-                        // is parameter of type --param=value but shouldn't?
-                        return error({argument: arg});
-                }
+            if(config.flag)
+            {
+                var value = this.getTruthValue(argumentValue);
+                if(value === null)
+                    this.errors.unexpected_value.push(opt);
                 else
-                    setResult(arg, true);
+                    this.addResultOption(opt, value);
+            } 
+            else 
+            {
+                if(argumentValue)
+                    this.addResultOption(opt, argumentValue);
+                else if(tokenizer.peek().getType() != TokenType.VALUE)
+                    this.errors.expected_value.push(val);
+                else
+                    this.addResultOption(opt, tokenizer.next().getValue());
             }
         }
-
-        else if (arg == '--')
+        else 
         {
-            args = args.concat(argv.slice(i+1));
-            break;
-        }
-
-        // required argument
-        else if(expectsArg)
-        {
-            setResult(last, arg);
-            expectsArg = false;
-        }
-
-        // arg that isn't an option or value
-        else {
-            args.push(arg);
+            this.errors.unknown.push(opt);
         }
     }
 
-    if(expectsArg)
-    {
-        return error({required: last});
-    }
+    this.setDefaults();
 
-    // look for missing parameters that have been marked as required
-    var requiredParams = [];
-    for(var arg in opts)
-    {
-        if(opts[arg].required && !(arg in result))
-            requiredParams.push(arg);
+    // check for required options that were left out
+    Obj.forEach(this.config, function(name, config){
+        if(config.required && !(name in this.result.opt))
+            this.errors.required.push(name);
+    }, this);
 
-        if(opts[arg].default && !(arg in result))
-            result[arg] = opts[arg].default;
-    }
 
-    if(requiredParams.length > 0)
-    {
-        return error({missing: requiredParams});
-    }
+    this.handleErrors();
 
-    return {
-        opt: result,
-        args: args
-    };
+    return this.result;
 };
-
 
 module.exports = {
-    parse: parse
+    /**
+     * Parses command-line arguments
+     * @param {object} opts
+     * @param {Array} argv argument array
+     * @param {Function} error callback handler for missing options etc (default: throw exception)
+     * @returns {{opt: {}, args: Array}}
+     */
+    parse: function(opts, argv, error)
+    {
+        var parser = new Parser(opts, argv, error);
+        return parser.parse();
+    }
 };
-

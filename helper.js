@@ -96,6 +96,15 @@ function forEach(obj, cb, ctx)
         cb.call(ctx, key, obj[key]);
 }
 
+function map(obj, cb, ctx)
+{
+    var result = {};
+    forEach(obj, function(key, val){
+        result[key] = cb.call(ctx, key, val);
+    }, ctx);
+    return result;
+}
+
 function isString(str)
 {
     return (typeof str == "string" || str instanceof String);
@@ -114,7 +123,8 @@ module.exports = {
 
 	Object: {
 		reduce: reduce,
-        forEach: forEach
+        forEach: forEach,
+        map: map
 	}
 
 };

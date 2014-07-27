@@ -1,110 +1,106 @@
+var helper = require('./helper');
+var stringTokenizer = require('./string_tokenizer');
+
+var Str = helper.String;
+
+var TokenType = {
+	EOF: 0,
+	VALUE: 1,
+	SHORT_ARG: 2,
+	LONG_ARG: 3,
+	LONG_ARG_WITH_VALUE: 4,
+	INVALID: 99
+};
+
+function Token(type, value)
+{
+	this.type_ = type;
+	this.value_ = value;
+};
+
+Token.prototype.type_;
+Token.prototype.value_;
+Token.prototype.source_;
+
+Token.prototype.getType = function()
+{
+	return this.type_;
+};
+
+Token.prototype.getValue = function()
+{
+	return this.value_;
+};
 
 function Tokenizer(input)
 {
-	this.input = input;
-	this.len = input.length;
-}
+	if(helper.isString(input))
+		input = stringTokenizer.create(input).allTokens();
 
-Tokenizer.prototype.input = null;
+	this.input_ = input;
+};
 
-Tokenizer.prototype.len = 0;
+Tokenizer.prototype.index_ = 0;
 
-Tokenizer.prototype.pos = 0;
+Tokenizer.prototype.endOfArguments_ = false;
 
-Tokenizer.prototype.nextToken = function()
+Tokenizer.prototype.peek = function()
 {
-	var state = 0;
-	var token = null;
-	var strch = "";
-	var escape = false;
-	var saveEscape = false;
-	while(this.pos < this.len)
+	if(this.index_ >= this.input_.length)
 	{
-		var ch = this.input[this.pos];
-		saveEscape = escape;
-
-		switch(state)
-		{
-			// eat up whitespace between tokens
-			case 0:
-				if(ch != ' ' && ch != '\t')
-				{
-					state = 1;
-					token = "";
-					continue;
-				}
-				break;
-
-			case 1:
-				// check for start of string
-				if(ch == '"' || ch == "'")
-				{
-					if(escape)
-					{
-						token += ch;
-					} 
-					else {
-						state = 2;
-						strch = ch;
-					}
-				}
-				// end of token?
-				else if(!escape && (ch == ' ' || ch == '\t'))
-				{
-					this.pos++;
-					return token;
-				}
-				else {
-					if(!escape && ch == "\\")
-					{
-						escape = true;
-					}
-					else
-					{
-						token += ch;
-					}
-				}
-				break;
-
-			// string handling
-			case 2:
-				if(ch == strch)
-				{
-					if(escape && ch == '"')
-						token += ch;
-					else state = 1;
-				}
-				else
-				{
-					if(!escape && ch == "\\" && strch == '"')
-						escape = true;
-					else token += ch;
-				}
-				break;
-		}
-
-		escape = (saveEscape != escape);
-		this.pos++;
+		return new Token(TokenType.EOF);
 	}
 
+	var arg = this.input_[this.index_];
+
+	if(arg.length == 0)
+	{
+		this.index_++;
+		return this.peek();
+	}
+
+	if(this.endOfArguments_)
+	{
+		return new Token(TokenType.VALUE, arg);
+	}
+
+	if(arg == '--') 
+	{
+		this.endOfArguments_ = true;
+		this.index_++;
+		return this.peek();
+	}
+
+	if(arg[0] != '-')
+		return new Token(TokenType.VALUE, arg);
+
+	if(arg.length == 2 && Str.isAlphaNumericAt(arg, 1))
+		return new Token(TokenType.SHORT_ARG, arg[1]);
+
+	if(arg.length > 3 && arg[1] == '-' && Str.isAlphaNumericAt(arg, 2))
+	{
+		var parts = arg.substr(2).split('=');
+		if(parts.length > 1)
+			return new Token(TokenType.LONG_ARG_WITH_VALUE, [parts[0], parts.slice(1).join('=')]);
+
+		return new Token(TokenType.LONG_ARG, parts[0]);
+	}
+		
+	return new Token(TokenType.INVALID, arg);
+};
+
+Tokenizer.prototype.next = function()
+{
+	var token = this.peek();
+	this.index_++;
 	return token;
 };
 
-Tokenizer.prototype.allTokens = function()
+Tokenizer.prototype.isEof = function()
 {
-	var tokens = [];
-	var token = this.nextToken();
-	while(token != null)
-	{
-		tokens.push(token);
-		token = this.nextToken();
-	}
-	return tokens;
+	return this.peek().getType() == TokenType.EOF;
 };
 
-module.exports = {
-	create: function(str){
-		return new Tokenizer(str);
-	}
-};
-
+module.exports.Token = Token;
+module.exports.Tokenizer = Tokenizer;
+module.exports.TokenType = TokenType;
