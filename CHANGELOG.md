@@ -1,6 +1,11 @@
 Changelog
 =========
 
+## 0.4.0
+
+* Major code refactor and rewrite
+* Option parameter value validation
+
 ## 0.3.0
 
 ### Features

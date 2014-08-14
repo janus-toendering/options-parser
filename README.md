@@ -19,14 +19,15 @@ var result = options.parse({
   host:  { short: 'h', default: 'localhost' },
   input: { short: 'i', multi: true },
   r:     { flag: true },
-  db:    { default: 'test' }
+  db:    { default: 'test' },
+  out:   { short: 'o', type: options.type.file.open.write() }
 });
 
 console.log(result);
 ```
 Running the above code with
 ```sh
-node example.js --user=joe -a --host www.example.com output.txt -i file1.txt --input file2.txt
+node example.js --user=joe -a --host www.example.com output.txt -i file1.txt --input file2.txt -o out.txt
 ```
 would produce
 ```javascript
@@ -35,7 +36,8 @@ would produce
      all: true,
      host: 'www.example.com',
      db: 'test',
-     input: [ 'file1.txt', 'file2.txt' ] },
+     input: [ 'file1.txt', 'file2.txt' ],
+     out: { name: 'out.txt', fd: 9 } },
   args: [ 'output.txt' ] }
 ```
 
@@ -72,7 +74,9 @@ The first argument to .parse(...) is always the options object defining what to 
   showHelp: [bool|object],  // automatically show help screen when this option is present 
                             // (implies flag: true if unset)
   
-  varName: [string]         // name to use for value placeholder in help screen (see below)
+  varName: [string],        // name to use for value placeholder in help screen (see below)
+
+  type: [Function}          // Type validation. See more details below.
 }
 ```  
 
@@ -158,4 +162,45 @@ options-parser example: [options]
   --help, -h             this help screen
 ```
 
+## Type Validation
 
+To ease validation of argument values you can pass a function
+to the "type" member of the options configuration object. The
+function takes two arguments: the value to validate and a 
+replacement function that takes one argument. If the validation
+succeeds return true, otherwise return an error message string.
+
+The replacement function can be used to replace the value being
+validated with a new value. Say you want to see if the value
+is a valid date. You can then use the replacement function to
+replace the string value of the input with a Date object 
+representing the parsed date.
+
+There are a few built-in type validation functions:
+```javascript
+var options = require('options-parser');
+
+// require parameter value to be an integer
+options.type.int(errorMessage);
+
+// require parameter value to be a valid file and open it for reading and writing
+options.type.file.open(errorMessage, options);
+
+// require parameter value to be a valid file and open it for reading
+options.type.file.open.read(errorMessage, options);
+
+// require parameter value to be a valid file and open it for writing
+options.type.file.open.write(errorMessage, options);
+```
+
+The errorMessage string is optional. If no error message is passed a default
+error message will be used.
+
+The options object can have two fields: `flags` and `mode` which reflect
+the `flags` and `mode` parameters of the 
+[fs.open api] (http://nodejs.org/api/fs.html#fs_fs_open_path_flags_mode_callback)
+function.
+
+The `file.open.xxx` functions all replace the value with an object with two
+fields: `name` and `fd`. `name` is the name of the file as specified by the user and
+`fd` is the file descriptor of the opened file. See the first example near the top of the page
