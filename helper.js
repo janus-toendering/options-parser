@@ -81,7 +81,6 @@ function fitWidth(s, len)
  * @param {Object} ctx
  * @return {any}
  */
-// 
 function reduce (obj, cb, initial, ctx)
 {
     var acc = initial;
@@ -90,12 +89,25 @@ function reduce (obj, cb, initial, ctx)
     return acc;
 }
 
+/**
+ * Standard for-each over objects
+ * @param {Object} obj
+ * @param {Function} cb
+ * @param {Object} ctx
+ */
 function forEach(obj, cb, ctx)
 {
     for(var key in obj)
         cb.call(ctx, key, obj[key]);
 }
 
+/**
+ * Standard map over objects
+ * @param {Object} obj 
+ * @param {Function} cb
+ * @param {Object} ctx
+ * @return {Object}
+ */
 function map(obj, cb, ctx)
 {
     var result = {};
@@ -105,6 +117,11 @@ function map(obj, cb, ctx)
     return result;
 }
 
+/**
+ * Test if a given object is a string
+ * @param {Object} str
+ * @return {boolean}
+ */
 function isString(str)
 {
     return (typeof str == "string" || str instanceof String);
