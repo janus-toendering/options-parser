@@ -30,6 +30,8 @@ OptionsParser.prototype.defaultErrorHandler = function(err)
         throw new Error(util.format(this.err_argument, err.argument));
     if(err.missing)
         throw new Error(util.format(this.err_missing, err.missing.join(', ')));
+    if(err.validation)
+        throw new Error(err.validation);
     /* istanbul ignore else */
     if(err.unknown)
         throw new Error(util.format(this.err_unknown, err.unknown));
@@ -92,9 +94,57 @@ OptionsParser.prototype.parse = function(opts, argv, error)
         }
     }, this);
 
+    this.validateTypes_(opts, result, error);
+
     return result;
 };
 
+/**
+ * @param {Function} typeFn
+ * @param {string} value
+ * @param {Function} replaceFn
+ * @param {Function} errorFn
+ */
+OptionsParser.prototype.validateType_ = function(typeFn, value, replaceFn, errorFn)
+{
+    var errorMsg = typeFn.call(typeFn, value, replaceFn);
+    if(helper.isString(errorMsg))
+    {
+        errorFn({validation: errorMsg });
+    }
+};
+
+/**
+ * @param {object} opts
+ * @param {object} result
+ * @param {Function} err
+ */
+OptionsParser.prototype.validateTypes_ = function(opts, result, err)
+{
+    Obj.forEach(opts, function(name, config){
+        if(!(typeof config === "object")) 
+            return;
+        
+        if((name in result.opt) && (typeof config.type === "function"))
+        {
+            var value = result.opt[name];
+            if(Array.isArray(value))
+            {
+                value.forEach(function(val, index){
+                    this.validateType_(config.type, val, function(newValue){
+                        result.opt[name][index] = newValue;
+                    }, err);
+                }, this);
+            }
+            else
+            {
+                this.validateType_(config.type, value, function(newValue){
+                    result.opt[name] = newValue;
+                }, err);
+            }
+        }
+    }, this);
+};
 
 /**
  * Get maximum width of arguments
@@ -228,4 +278,5 @@ OptionsParser.prototype.help = function(opts, options)
 };
 
 module.exports = new OptionsParser();
+module.exports.type = require('./types.js');
 

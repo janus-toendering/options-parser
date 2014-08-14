@@ -1,4 +1,7 @@
 var util = require('util');
+var os = require('os');
+var path = require('path');
+var fs = require('fs');
 var should = require('should');
 var parser = require('../options-parser.js');
 var helper = require('../helper.js')
@@ -583,6 +586,212 @@ describe("OptionsParser", function(){
             }, options);
 
             arr[0].should.eql('node test.js [options] filename');
+        });
+
+    });
+
+    describe("validateTypes_", function(){
+
+        it("should validate type=int options", function(){
+            var opts = {
+                "int": {
+                    short: "i",
+                    type: parser.type.int("NOT AN INT")
+                }
+            };
+
+            (function(){ 
+                parser.parse(opts, "-i 100");
+            }).should.not.throw();
+
+            (function(){
+                parser.parse(opts, "--int=-100");
+            }).should.not.throw();
+
+            (function(){
+                parser.parse(opts, "-i string");
+            }).should.throw("NOT AN INT");
+            
+        });
+
+        it("should validate type=regex options", function(){
+            var opts = {
+                "regex": {
+                    short: "r",
+                    type: parser.type.regexp("three letters", /[a-z]{3}/)
+                }
+            };
+
+            (function(){
+                parser.parse(opts, "-r abc");
+            }).should.not.throw();
+
+            (function(){
+                parser.parse(opts, "-r 123");
+            }).should.throw("three letters");
+
+            (function(){
+                parser.parse(opts, "-r ab");
+            }).should.throw("three letters");
+
+            (function(){
+                parser.parse(opts, "-r ABC");
+            }).should.throw("three letters");
+
+            (function(){
+                parser.parse(opts, "-r 12azu23");
+            }).should.not.throw();
+
+        });
+
+        it("should allow string instead if regex for type=regex options", function(){
+            var opts = {
+                "regex": {
+                    short: "r",
+                    type: parser.type.regexp("three letters", "[a-z]{3}")
+                }
+            };
+
+                        (function(){
+                parser.parse(opts, "-r abc");
+            }).should.not.throw();
+
+            (function(){
+                parser.parse(opts, "-r 123");
+            }).should.throw("three letters");
+
+            (function(){
+                parser.parse(opts, "-r ab");
+            }).should.throw("three letters");
+
+            (function(){
+                parser.parse(opts, "-r ABC");
+            }).should.throw("three letters");
+
+            (function(){
+                parser.parse(opts, "-r 12azu23");
+            }).should.not.throw();
+        });
+
+        function tmpfile(filename)
+        {
+            var counter = 0;
+            file = path.join(os.tmpdir(), filename);
+
+            while(fs.existsSync(file))
+            {
+                file = path.join(os.tmpdir(), filename + counter++);
+            }
+            return file;
+        }
+
+        it("should open file if type=file.open.read for reading", function(){
+            var msg = "File not found or could not be opened for reading";
+            var opts = {
+                "file": {
+                    short: "f",
+                    type: parser.type.file.open.read(msg)
+                }
+            };
+
+            var result ;
+            (function(){
+                result = parser.parse(opts, ["-f", __filename]);
+
+            }).should.not.throw();
+
+            result.opt.should.have.property("file");
+            result.opt.file.should.have.property("fd");
+            result.opt.file.should.have.property("name", __filename);
+
+            // close opened file
+            fs.closeSync(result.opt.file.fd);
+
+            (function(){
+                parser.parse(opts, ["-f", tmpfile("toendering.does-not-exist")]);
+            }).should.throw(msg);
+        });
+
+        it("should open file for writing if type=file.open.write", function(){
+            // this is open to a race condition, but that is probably
+            // only likely to happen if you run the test multiple times
+            // simultaneously
+
+            var opts = {
+                "file": {
+                    short: "f",
+                    type: parser.type.file.open.write("could not open file for writing")
+                }
+            }
+
+            var result;
+            var file = tmpfile("toendering.options-parser.tmp");
+            (function(){
+                result = parser.parse(opts, ["-f", file]);
+            }).should.not.throw();
+            
+            result.opt.should.have.property("file");
+            result.opt.file.should.have.property("name", file);
+            result.opt.file.should.have.property("fd");
+
+            (function(){
+                fs.writeSync(result.opt.file.fd, new Buffer("test"), 0, 4, null);
+            }).should.not.throw();
+            
+            try {
+                fs.closeSync(result.opt.file.fd);
+                fs.unlinkSync(result.opt.file.name);
+            } catch(e){};
+        });
+
+        it("should open file for reading/writing if type=file.open", function(){
+            // this is open to a race condition, but that is probably
+            // only likely to happen if you run the test multiple times
+            // simultaneously
+
+            var opts = {
+                "file": {
+                    short: "f",
+                    type: parser.type.file.open("could not open file for writing")
+                }
+            }
+
+            var result;
+            var file = tmpfile("toendering.options-parser.tmp");
+            (function(){
+                fs.writeFileSync(file, "test");
+                result = parser.parse(opts, ["-f", file]);
+            }).should.not.throw();
+            result.opt.should.have.property("file");
+            result.opt.file.should.have.property("name", file);
+            result.opt.file.should.have.property("fd");
+            
+            fs.writeSync(result.opt.file.fd, new Buffer("test"), 0, 4, 4);
+            
+            var buffer = new Buffer(8);
+            fs.readSync(result.opt.file.fd, buffer, 0, 8, 0);
+            buffer.toString().should.equal("testtest");
+
+            try {
+                fs.closeSync(result.opt.file.fd);
+                fs.unlinkSync(result.opt.file.name);
+            } catch(e){};
+
+        });
+
+        it("should handle type validation replacement for 'multi' options", function(){
+            var opts = {
+                "name": {
+                    short: "n",
+                    multi: true,
+                    type: function(value, replace) {
+                        replace(value.charCodeAt(0));
+                    }
+                }
+            };
+
+            var result = parser.parse(opts, "-n ab -n ba -n zzo");
+            result.opt.name.should.eql([97, 98, 122]);
         });
 
     });
