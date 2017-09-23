@@ -1,24 +1,28 @@
 {
-    "name": "options-parser",
-    "version": "0.4.0",
-    "description": "A full-featured no-nonsense command line parser with no external dependencies",
-    "keywords": [
-        "getopt","arguments","options","command-line","option parser"
-    ],
-    "license": "BSD-3-Clause",
-    "author": "Janus Tøndering <janus@toendering.dk>",
-    "main": "src/options-parser.js",
-    "repository": {
-        "type": "git",
-        "url": "http://github.com/janus-toendering/options-parser.git"
-    },
-    "devDependencies": {
-        "mocha": "1.17.*",
-        "should": "3.1.*",
-        "istanbul": "0.2.*"
-    },
-    "scripts": {
-        "test": "mocha",
-        "coverage": "istanbul cover _mocha -- -R spec"
-    }
+  "name": "options-parser",
+  "version": "0.4.0",
+  "description": "A full-featured no-nonsense command line parser with no external dependencies",
+  "keywords": [
+    "getopt",
+    "arguments",
+    "options",
+    "command-line",
+    "option parser"
+  ],
+  "license": "BSD-3-Clause",
+  "author": "Janus Tøndering <janus@toendering.dk>",
+  "main": "src/options-parser.js",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/janus-toendering/options-parser.git"
+  },
+  "devDependencies": {
+    "istanbul": "^0.4.5",
+    "mocha": "^3.5.3",
+    "should": "^13.1.0"
+  },
+  "scripts": {
+    "test": "mocha",
+    "coverage": "istanbul cover _mocha -- -R spec"
+  }
 }

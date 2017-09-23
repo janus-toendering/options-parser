@@ -148,18 +148,18 @@ describe("OptionsParser", function(){
 
         it("should let later params take precedence", function(){
             var argv = ['-a', '1', '-a', '2'];
-            parser.parse({'a': 1}, argv).opt.should.have.property("a", 2);
+            parser.parse({'a': 1}, argv).opt.should.have.property("a", "2");
 
             var argv = ['--all', '1', '--all', '2'];
-            parser.parse({'all': 1}, argv).opt.should.have.property("all", 2);
+            parser.parse({'all': 1}, argv).opt.should.have.property("all", "2");
         });
 
         it("should parse multi-params correctly", function(){
             var argv = ['-a', '1', '-a', '2'];
-            parser.parse({'a': {multi:true}}, argv).opt.should.have.property("a", [1, 2]);
+            parser.parse({'a': {multi:true}}, argv).opt.should.have.property("a", ["1", "2"]);
 
             var argv = ['--all', '1', '--all', '2'];
-            parser.parse({'all': {multi:true}}, argv).opt.should.have.property("all", [1, 2]);
+            parser.parse({'all': {multi:true}}, argv).opt.should.have.property("all", ["1", "2"]);
         });
 
         it("should parse '--user=janus --pass 123 janus.txt -r --input=1.txt -i 2.txt' correctly", function(){
