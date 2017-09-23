@@ -3,8 +3,8 @@ var os = require('os');
 var path = require('path');
 var fs = require('fs');
 var should = require('should');
-var parser = require('../options-parser.js');
-var helper = require('../helper.js')
+var parser = require('../src/options-parser.js');
+var helper = require('../src/helper.js')
 
 describe("OptionsParser", function(){
 
@@ -800,7 +800,7 @@ describe("OptionsParser", function(){
 
 
 describe("StringTokenizer", function(){
-    var tokenizer = require('../string_tokenizer.js');
+    var tokenizer = require('../src/string_tokenizer.js');
     
     describe("allTokens", function(){
         it("should split words on whitespace boundries", function(){
