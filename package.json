@@ -17,12 +17,10 @@
     "url": "http://github.com/janus-toendering/options-parser.git"
   },
   "devDependencies": {
-    "istanbul": "^0.4.5",
-    "mocha": "^3.5.3",
-    "should": "^13.1.0"
+    "jest": "^24.9.0"
   },
   "scripts": {
-    "test": "mocha",
-    "coverage": "istanbul cover _mocha -- -R spec"
-  }
+    "test": "jest"
+  },
+  "dependencies": {}
 }
